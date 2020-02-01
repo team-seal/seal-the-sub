@@ -49,7 +49,7 @@ pub async fn play(window: &Window, gfx: &mut Graphics, events: &mut EventStream)
             &world.read_storage::<Pos>(),
             &world.read_storage::<Ori>(),
         ).join() {
-            let rect = Rectangle::new(Vec2::new(-32.0, -12.0).into_tuple(), Vec2::new(64.0, 24.0).into_tuple());
+            let rect = Rectangle::new(Vec2::new(-42.0, -12.0).into_tuple(), Vec2::new(64.0, 24.0).into_tuple());
             gfx.set_transform(
                 Transform::rotate(ori.0 * 180.0 / 3.1415)
                     .then(Transform::translate(pos.0.into_tuple()))
