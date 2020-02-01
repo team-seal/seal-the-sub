@@ -6,17 +6,22 @@ use specs::{
 };
 use crate::game::Inputs;
 
+pub use specs::World;
+
 pub struct Globals {
     pub player: Entity,
 }
 
 pub fn create() -> (Globals, specs::World) {
     let mut world = specs::World::new();
+
     world.register::<Pos>();
     world.register::<Vel>();
     world.register::<Ori>();
     world.register::<Rot>();
     world.register::<Agent>();
+
+    world.insert(Seafloor::sine());
 
     let player = world
         .create_entity()
@@ -170,7 +175,7 @@ const SEAFLOOR_OFFSET: f32 = -500.0;
 impl Seafloor {
     pub fn sine() -> Self {
         Self {
-            heights: (SEAFLOOR_OFFSET..500)
+            heights: (SEAFLOOR_OFFSET as i32..500)
                 .map(|i| i as f32 * SEAFLOOR_STRIDE)
                 .map(|x| SEAFLOOR_HEIGHT + (x * 0.01).sin() * 100.0)
                 .collect(),
@@ -182,8 +187,8 @@ impl Seafloor {
         let fract = (xx % SEAFLOOR_STRIDE) / SEAFLOOR_STRIDE;
         let idx = (xx / SEAFLOOR_STRIDE) as usize;
 
-        let a = self.get(idx).copied().unwrap_or(0.0);
-        let b = self.get(idx + 1).copied().unwrap_or(0.0);
+        let a = self.heights.get(idx).copied().unwrap_or(0.0);
+        let b = self.heights.get(idx + 1).copied().unwrap_or(0.0);
 
         a + (b - a) * fract
     }

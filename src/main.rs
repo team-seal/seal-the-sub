@@ -6,33 +6,38 @@ use world::{Pos, Ori};
 use specs::prelude::*;
 use quicksilver::{
     geom::Vector,
-    graphics::{Color, Graphics},
-    lifecycle::{run, EventStream, Settings, Window},
+    lifecycle::{run, Settings, Window},
 };
-
-fn main() {
-    run(
-        Settings {
-            size: Vector::new(800.0, 600.0).into(),
-            title: "Seal the Sub",
-            ..Settings::default()
-        },
-        app,
-    );
-}
+use crate::game::Game;
 
 pub enum State {
-    Game,
+    Game(Game),
 }
 
-async fn app(window: Window, mut gfx: Graphics, mut events: EventStream) -> quicksilver::Result<()> {
-    let mut state = State::Game;
+struct Engine {
+    state: State,
+}
 
-    while let Some(new_state) = match state {
-        State::Game => game::play(&window, &mut gfx, &mut events).await?,
-    } {
-        state = new_state;
+impl quicksilver::lifecycle::State for Engine {
+    fn new() -> quicksilver::Result<Self> {
+        Ok(Self {
+            state: State::Game(Game::new()),
+        })
     }
 
-    Ok(())
+    fn draw(&mut self, window: &mut Window) -> quicksilver::Result<()> {
+        match &mut self.state {
+            State::Game(game) => game.tick(window),
+        }
+
+        Ok(())
+    }
+}
+
+fn main() {
+    run::<Engine>(
+        "Seal the Sub",
+        Vector::new(800.0, 600.0),
+        Settings::default(),
+    );
 }
