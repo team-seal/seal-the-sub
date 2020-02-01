@@ -158,3 +158,33 @@ pub enum Agent {
 impl Component for Agent {
     type Storage = VecStorage<Self>;
 }
+
+pub struct Seafloor {
+    heights: Vec<f32>,
+}
+
+const SEAFLOOR_HEIGHT: f32 = 1000.0;
+const SEAFLOOR_STRIDE: f32 = 10.0;
+const SEAFLOOR_OFFSET: f32 = -500.0;
+
+impl Seafloor {
+    pub fn sine() -> Self {
+        Self {
+            heights: (SEAFLOOR_OFFSET..500)
+                .map(|i| i as f32 * SEAFLOOR_STRIDE)
+                .map(|x| SEAFLOOR_HEIGHT + (x * 0.01).sin() * 100.0)
+                .collect(),
+        }
+    }
+
+    pub fn sample(&self, x: f32) -> f32 {
+        let xx = x - SEAFLOOR_OFFSET;
+        let fract = (xx % SEAFLOOR_STRIDE) / SEAFLOOR_STRIDE;
+        let idx = (xx / SEAFLOOR_STRIDE) as usize;
+
+        let a = self.get(idx).copied().unwrap_or(0.0);
+        let b = self.get(idx + 1).copied().unwrap_or(0.0);
+
+        a + (b - a) * fract
+    }
+}
