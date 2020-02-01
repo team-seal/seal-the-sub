@@ -3,13 +3,14 @@ use specs::prelude::*;
 use quicksilver::{
     geom::{Rectangle, Triangle, Vector, Transform},
     input::Key,
-    graphics::{Color, Background, Image},
+    graphics::{Color, Background, Image, Font, FontStyle},
+    sound::Sound,
     lifecycle::{Window, Event, Asset},
 };
 use rand::{thread_rng, prelude::*};
 use crate::{
     State,
-    world::{self, Pos, Ori, Vel, Body, Seafloor},
+    world::{self, Pos, Ori, Vel, Body, Seafloor, Attr},
 };
 
 #[derive(Copy, Clone, Default)]
@@ -28,6 +29,12 @@ pub struct Game {
     background: Asset<Image>,
     submarine: Asset<Image>,
     seal: Asset<Image>,
+    fishes: Vec<Asset<Image>>,
+    bubbles: Vec<Asset<Image>>,
+
+    chomp: Asset<Sound>,
+
+    font: Asset<Font>,
 }
 
 impl Game {
@@ -41,6 +48,19 @@ impl Game {
             background: Asset::new(Image::load("ocean.png")),
             submarine: Asset::new(Image::load("submarine.png")),
             seal: Asset::new(Image::load("seal.png")),
+            fishes: vec![
+                Asset::new(Image::load("fish0.png")),
+                Asset::new(Image::load("fish1.png")),
+                Asset::new(Image::load("fish2.png")),
+            ],
+            bubbles: vec![
+                Asset::new(Image::load("bubble0.png")),
+                Asset::new(Image::load("bubble1.png")),
+            ],
+
+            chomp: Asset::new(Sound::load("chomp.wav")),
+
+            font: Asset::new(Font::load("font.ttf")),
         }
     }
 
@@ -54,6 +74,14 @@ impl Game {
 
         // Tick world
         let tick_info = world::tick(&self.world, self.inputs, time);
+
+        for event in tick_info.events.iter() {
+            match event {
+                world::Event::Eat => {
+                    self.chomp.execute(|chomp| chomp.play());
+                },
+            }
+        }
 
         let world_trans = Transform::IDENTITY
             * Transform::translate((Vec2::new(window.screen_size().x, window.screen_size().y) * 0.5).into_tuple())
@@ -103,7 +131,7 @@ impl Game {
             &self.world.read_storage::<Body>(),
         ).join() {
             match body {
-                Body::Seal | Body::Fish => {
+                Body::Seal => {
                     self.seal.execute(|seal| {
                         window.draw_ex(
                             &Rectangle::new((-48.0, -32.0), (64.0, 64.0)),
@@ -113,6 +141,38 @@ impl Game {
                                 * Transform::rotate(ori.0 * 180.0 / 3.1415)
                                 * Transform::scale(if vel.0.x > 0.0 { (1.0, 1.0) } else { (1.0, -1.0) }),
                             0.0,
+                        );
+
+                        Ok(())
+                    });
+                },
+                Body::Fish(i) => {
+                    let img_idx = i % self.fishes.len();
+                    self.fishes[img_idx].execute(|fish| {
+                        window.draw_ex(
+                            &Rectangle::new((-24.0, -16.0), (32.0, 32.0)),
+                            Background::Img(&fish),
+                                world_trans
+                                * Transform::translate(pos.0.into_tuple())
+                                * Transform::rotate(ori.0 * 180.0 / 3.1415)
+                                * Transform::scale(if vel.0.x > 0.0 { (1.0, 1.0) } else { (1.0, -1.0) }),
+                            0.0,
+                        );
+
+                        Ok(())
+                    });
+                },
+                Body::Bubble(i) => {
+                    let img_idx = i % self.bubbles.len();
+                    self.bubbles[img_idx].execute(|bubble| {
+                        window.draw_ex(
+                            &Rectangle::new((-24.0, -24.0), (48.0, 48.0)),
+                            Background::Img(&bubble),
+                                world_trans
+                                * Transform::translate(pos.0.into_tuple())
+                                * Transform::rotate(ori.0 * 180.0 / 3.1415)
+                                * Transform::scale(if vel.0.x > 0.0 { (1.0, 1.0) } else { (1.0, -1.0) }),
+                            0.5,
                         );
 
                         Ok(())
@@ -147,6 +207,23 @@ impl Game {
             world_trans,
             1.0,
         );
+
+        let attr = self.world.read_resource::<Attr>();
+
+        self.font.execute(|font| {
+            let img = font.render(&format!("Stamina:"), &FontStyle::new(32.0, Color::WHITE)).unwrap();
+            window.draw_ex(
+                &img.area(),
+                Background::Img(&img),
+                Transform::translate((24.0, 24.0)),
+                10.0,
+            );
+
+            Ok(())
+        });
+
+        window.draw(&Rectangle::new((128.0, 32.0), (128.0, 24.0)), Color::from_rgba(100, 100, 100, 1.0));
+        window.draw(&Rectangle::new((128.0, 32.0), (128.0 * attr.stamina, 24.0)), Color::from_rgba(100, 255, 50, 1.0));
 
         self.time = time + 1.0 / 60.0;
     }
