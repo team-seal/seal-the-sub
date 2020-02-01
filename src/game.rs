@@ -1,7 +1,7 @@
 use vek::*;
 use specs::prelude::*;
 use quicksilver::{
-    geom::{Rectangle, Vector, Transform},
+    geom::{Rectangle, Triangle, Vector, Transform},
     input::Key,
     graphics::Color,
     lifecycle::{Window, Event},
@@ -52,6 +52,20 @@ impl Game {
 
         // Sea floor
         let seafloor = self.world.read_resource::<Seafloor>();
+        for i in 0..100 {
+            let incr = 20.0;
+            let x = (tick_info.view_centre.x - 1000.0) + i as f32 * incr;
+            window.draw_ex(
+                &Triangle::new(
+                    (x, seafloor.sample(x)),
+                    (x + incr, seafloor.sample(x + incr)),
+                    (0.0, 1000000.0)
+                ),
+                Color::from_rgba(250, 200, 150, 255.0),
+                world_trans,
+                -1.0,
+            );
+        }
 
         // Entities
         for (pos, ori) in (
@@ -74,7 +88,7 @@ impl Game {
             &Rectangle::new(Vec2::new(-500000.0, 0.0).into_tuple(), Vec2::broadcast(1000000.0).into_tuple()),
             Color::from_rgba(0, 150, 250, 0.3),
             world_trans,
-            0.0,
+            1.0,
         );
     }
 }

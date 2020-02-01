@@ -66,6 +66,8 @@ pub fn tick(world: &specs::World, inputs: Inputs) -> TickInfo {
 
     let underwater = |pos: &Pos| pos.0.y > 0.0;
 
+    let seafloor = world.read_resource::<Seafloor>();
+
     // Physics
     for (pos, vel, ori, rot) in (
         &mut world.write_storage::<Pos>(),
@@ -89,6 +91,9 @@ pub fn tick(world: &specs::World, inputs: Inputs) -> TickInfo {
 
         pos.0 += vel.0;
         ori.0 += rot.0;
+
+        // Collision with seafloor
+        pos.0.y = pos.0.y.min(seafloor.sample(pos.0.x));
     }
 
     // Control
@@ -170,25 +175,25 @@ pub struct Seafloor {
 
 const SEAFLOOR_HEIGHT: f32 = 1000.0;
 const SEAFLOOR_STRIDE: f32 = 10.0;
-const SEAFLOOR_OFFSET: f32 = -500.0;
+const SEAFLOOR_OFFSET: i32 = 500;
 
 impl Seafloor {
     pub fn sine() -> Self {
         Self {
-            heights: (SEAFLOOR_OFFSET as i32..500)
+            heights: (-SEAFLOOR_OFFSET..500)
                 .map(|i| i as f32 * SEAFLOOR_STRIDE)
-                .map(|x| SEAFLOOR_HEIGHT + (x * 0.01).sin() * 100.0)
+                .map(|x| SEAFLOOR_HEIGHT + (x * 0.01).sin() * 30.0)
                 .collect(),
         }
     }
 
     pub fn sample(&self, x: f32) -> f32 {
-        let xx = x - SEAFLOOR_OFFSET;
-        let fract = (xx % SEAFLOOR_STRIDE) / SEAFLOOR_STRIDE;
+        let xx = x + SEAFLOOR_OFFSET as f32 * SEAFLOOR_STRIDE;
+        let fract = (xx / SEAFLOOR_STRIDE).fract();
         let idx = (xx / SEAFLOOR_STRIDE) as usize;
 
         let a = self.heights.get(idx).copied().unwrap_or(0.0);
-        let b = self.heights.get(idx + 1).copied().unwrap_or(0.0);
+        let b = self.heights.get(idx.saturating_add(1)).copied().unwrap_or(0.0);
 
         a + (b - a) * fract
     }
