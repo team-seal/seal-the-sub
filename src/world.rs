@@ -1,9 +1,10 @@
 use vek::*;
+use rand::{prelude::*, thread_rng};
 use specs::{
     prelude::*,
     Component,
 };
-use crate::Inputs;
+use crate::game::Inputs;
 
 pub struct Globals {
     pub player: Entity,
@@ -15,25 +16,30 @@ pub fn create() -> (Globals, specs::World) {
     world.register::<Vel>();
     world.register::<Ori>();
     world.register::<Rot>();
-    world.register::<Player>();
+    world.register::<Agent>();
 
     let player = world
         .create_entity()
-        .with(Player)
         .with(Pos(Vec2::broadcast(64.0)))
         .with(Vel(Vec2::unit_x()))
         .with(Ori(0.0))
         .with(Rot(0.0))
+        .with(Agent::Player)
         .build();
 
-    world
-        .create_entity()
-        .with(Pos(Vec2::new(0.0, 0.0)))
-        .build();
-    world
-        .create_entity()
-        .with(Pos(Vec2::new(132.0, 132.0)))
-        .build();
+    for _ in 0..100 {
+        world
+            .create_entity()
+            .with(Pos(Vec2::new(
+                thread_rng().gen_range(-1000.0, 1000.0),
+                thread_rng().gen_range(0.0, 1000.0),
+            )))
+            .with(Vel(Vec2::zero()))
+            .with(Ori(0.0))
+            .with(Rot(0.0))
+            .with(Agent::Fish)
+            .build();
+    }
 
     (Globals {
         player,
@@ -53,35 +59,17 @@ const GRAVITY: f32 = 0.1;
 pub fn tick(world: &specs::World, inputs: Inputs) -> TickInfo {
     let mut tick_info = TickInfo::default();
 
-    for (pos, vel, ori, rot, player) in (
+    let underwater = |pos: &Pos| pos.0.y > 0.0;
+
+    // Physics
+    for (pos, vel, ori, rot) in (
         &mut world.write_storage::<Pos>(),
         &mut world.write_storage::<Vel>(),
         &mut world.write_storage::<Ori>(),
         &mut world.write_storage::<Rot>(),
-        world.read_storage::<Player>().maybe(),
     ).join() {
-        let underwater = pos.0.y > 0.0;
-
-        // User input
-        if player.is_some() {
-            if underwater {
-                if inputs.left { rot.0 -= TURN_RATE_WATER; }
-                if inputs.right { rot.0 += TURN_RATE_WATER; }
-
-                // Swimming
-                vel.0 += Vec2::new(
-                    ori.0.cos(),
-                    ori.0.sin(),
-                ) * 0.25;
-
-                if inputs.boost { vel.0 *= 1.025; }
-            } else {
-                if inputs.left { rot.0 -= TURN_RATE_AIR; }
-                if inputs.right { rot.0 += TURN_RATE_AIR; }
-            }
-        }
         // Drag
-        if underwater {
+        if underwater(pos) {
             // Drag
             vel.0 *= 0.95;
             rot.0 *= 0.95;
@@ -90,28 +78,52 @@ pub fn tick(world: &specs::World, inputs: Inputs) -> TickInfo {
             rot.0 *= 0.99;
         }
 
-        if !underwater {
+        if !underwater(pos) {
             vel.0.y += GRAVITY;
         }
 
         pos.0 += vel.0;
         ori.0 += rot.0;
+    }
 
-        // Tick info
-        if player.is_some() {
-            tick_info.view_centre = pos.0;// + vel.0 * 24.0;
-            tick_info.view_scale = 1.0;// - vel.0.magnitude() * 0.12;
+    // Control
+    for (pos, vel, ori, rot, agent) in (
+        &mut world.write_storage::<Pos>(),
+        &mut world.write_storage::<Vel>(),
+        &mut world.write_storage::<Ori>(),
+        &mut world.write_storage::<Rot>(),
+        &mut world.write_storage::<Agent>(),
+    ).join() {
+        match agent {
+            Agent::Player => {
+                // User input
+                if underwater(pos) {
+                    if inputs.left { rot.0 -= TURN_RATE_WATER; }
+                    if inputs.right { rot.0 += TURN_RATE_WATER; }
+
+                    if inputs.boost { vel.0 *= 1.025; }
+                } else {
+                    if inputs.left { rot.0 -= TURN_RATE_AIR; }
+                    if inputs.right { rot.0 += TURN_RATE_AIR; }
+                }
+
+                // Tick info
+                tick_info.view_centre = pos.0;
+                tick_info.view_scale = 1.0;
+            },
+            Agent::Fish => rot.0 += thread_rng().gen_range(-1.0, 1.0) * TURN_RATE_WATER,
+        }
+
+        // Swimming
+        if underwater(pos) {
+            vel.0 += Vec2::new(
+                ori.0.cos(),
+                ori.0.sin(),
+            ) * 0.25;
         }
     }
 
     tick_info
-}
-
-#[derive(Default)]
-pub struct Player;
-
-impl Component for Player {
-    type Storage = NullStorage<Self>;
 }
 
 pub struct Pos(pub Vec2<f32>);
@@ -135,5 +147,14 @@ impl Component for Ori {
 pub struct Rot(pub f32);
 
 impl Component for Rot {
+    type Storage = VecStorage<Self>;
+}
+
+pub enum Agent {
+    Player,
+    Fish,
+}
+
+impl Component for Agent {
     type Storage = VecStorage<Self>;
 }
