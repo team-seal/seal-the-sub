@@ -57,7 +57,7 @@ pub struct TickInfo {
     pub view_scale: f32,
 }
 
-const TURN_RATE_WATER: f32 = 0.005;
+const TURN_RATE_WATER: f32 = 0.0065;
 const TURN_RATE_AIR: f32 = 0.001;
 const GRAVITY: f32 = 0.1;
 
@@ -79,10 +79,16 @@ pub fn tick(world: &specs::World, inputs: Inputs) -> TickInfo {
         if underwater(pos) {
             // Drag
             vel.0 *= 0.95;
-            rot.0 *= 0.95;
+            rot.0 *= 0.90;
+
+            let ori_dir = Vec2::new(
+                ori.0.cos(),
+                ori.0.sin(),
+            );
+            vel.0 *= f32::lerp(ori_dir.dot(vel.0.try_normalized().unwrap_or(Vec2::zero())), 1.0, 0.9);
         } else {
             vel.0 *= 0.99;
-            rot.0 *= 0.99;
+            rot.0 *= 0.98;
         }
 
         if !underwater(pos) {
