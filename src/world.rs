@@ -38,9 +38,9 @@ impl Attr {
     }
 
     pub fn tick(&mut self, time: f32) {
-        self.stamina = (self.stamina - (0.000025 + 0.00000125 * time)).max(0.0).min(1.0);
-        self.hull = (self.hull - (0.000025 + 0.00000125 * time)).max(0.0).min(1.0);
-        self.fuel = (self.fuel - (0.000025 + 0.00000125 * time)).max(0.0).min(1.0);
+        self.stamina = (self.stamina - (0.0001 + 0.0000025 * time)).max(0.0).min(1.0);
+        self.hull = (self.hull - (0.0001 + 0.0000025 * time)).max(0.0).min(1.0);
+        self.fuel = (self.fuel - (0.0001 + 0.0000025 * time)).max(0.0).min(1.0);
 
         if self.stamina <= 0.0 || self.hull <= 0.0 || self.fuel <= 0.0 {
             self.lost = true;
