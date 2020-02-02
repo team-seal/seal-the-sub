@@ -31,6 +31,7 @@ pub struct Game {
     seal: Asset<Image>,
     fishes: Vec<Asset<Image>>,
     bubbles: Vec<Asset<Image>>,
+    dark: Asset<Image>,
 
     chomp: Asset<Sound>,
 
@@ -57,6 +58,7 @@ impl Game {
                 Asset::new(Image::load("bubble0.png")),
                 Asset::new(Image::load("bubble1.png")),
             ],
+            dark: Asset::new(Image::load("dark.png")),
 
             chomp: Asset::new(Sound::load("chomp.wav")),
 
@@ -208,6 +210,20 @@ impl Game {
             1.0,
         );
 
+        // Darkness
+
+        self.dark.execute(|dark| {
+            window.draw_ex(
+                &Rectangle::new((0.0, 0.0), (window.screen_size().x, window.screen_size().y)),
+                Background::Blended(&dark, Color::from_rgba(255, 255, 255, (tick_info.view_centre.y / 1500.0).max(0.0).min(1.0).powf(2.0))),
+                Transform::IDENTITY,
+                5.0,
+            );
+
+            Ok(())
+        });
+
+        // UI
         let attr = self.world.read_resource::<Attr>();
 
         let mut font = &mut self.font;
