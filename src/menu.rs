@@ -38,7 +38,7 @@ impl Menu {
         let (globals, world) = world::create();
         Self {
             time: 0.0,
-            background: Asset::new(Image::load("ocean.png")),
+            background: Asset::new(Image::load("splash.png")),
             submarine: Asset::new(Image::load("submarine.png")),
             seal: Asset::new(Image::load("seal.png")),
             fishes: vec![
@@ -79,16 +79,18 @@ impl Menu {
 
         window.clear(Color::from_rgba(120, 200, 255, 1.0));
 
+        if time < 3.0 {
         self.background.execute(|background| {
                         window.draw_ex(
                             &Rectangle::new((0.0, 0.0), (1000.0, 500.0)),
                             Background::Img(&background),
                             Transform::IDENTITY,
-                            -5.5,
+                            15.5,
                         );
 
                         Ok(())
                     });
+        }
 
         self.submarine.execute(|submarine| {
                         window.draw_ex(
