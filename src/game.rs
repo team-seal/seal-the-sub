@@ -34,6 +34,7 @@ pub struct Game {
     fishes: Vec<Asset<Image>>,
     bubbles: Vec<Asset<Image>>,
     tapes: Vec<Asset<Image>>,
+    fuels: Vec<Asset<Image>>,
     dark: Asset<Image>,
 
     chomp: Asset<Sound>,
@@ -69,6 +70,10 @@ impl Game {
             tapes: vec![
                 Asset::new(Image::load("tape0.png")),
                 Asset::new(Image::load("tape1.png")),
+                Asset::new(Image::load("roll.png")),
+            ],
+            fuels: vec![
+                Asset::new(Image::load("fuel.png")),
             ],
             dark: Asset::new(Image::load("dark.png")),
 
@@ -98,7 +103,7 @@ impl Game {
                     self.chomp.execute(|chomp| chomp.play());
                 },
                 world::Event::Splash(x) if (x - tick_info.view_centre.x).abs() < 400.0 => {
-                    self.hardsplash.execute(|hardsplash| hardsplash.play());
+                    self.hardsplash.execute(|hardsplash| {hardsplash.set_volume(5.0); hardsplash.play() });
                 },
                 world::Event::GetFuel => {
                     self.ding.execute(|ding| ding.play());
@@ -206,10 +211,10 @@ impl Game {
                     });
                 },
                 Body::Fuel(i) => {
-                    let img_idx = i % self.bubbles.len();
-                    self.bubbles[img_idx].execute(|bubble| {
+                    let img_idx = i % self.fuels.len();
+                    self.fuels[img_idx].execute(|bubble| {
                         window.draw_ex(
-                            &Rectangle::new((-24.0, -24.0), (48.0, 48.0)),
+                            &Rectangle::new((-20.0, -20.0), (40.0, 40.0)),
                             Background::Img(&bubble),
                                 world_trans
                                 * Transform::translate(pos.0.into_tuple())
@@ -225,7 +230,7 @@ impl Game {
                     let img_idx = i % self.tapes.len();
                     self.tapes[img_idx].execute(|bubble| {
                         window.draw_ex(
-                            &Rectangle::new((-24.0, -24.0), (48.0, 48.0)),
+                            &Rectangle::new((-20.0, -20.0), (40.0, 40.0)),
                             Background::Img(&bubble),
                                 world_trans
                                 * Transform::translate(pos.0.into_tuple())

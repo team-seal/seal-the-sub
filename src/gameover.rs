@@ -68,6 +68,29 @@ impl GameOver {
 
         window.clear(Color::from_rgba(120, 200, 255, 1.0));
 
+        self.background.execute(|background| {
+                        window.draw_ex(
+                            &Rectangle::new((0.0, 0.0), (1000.0, 500.0)),
+                            Background::Img(&background),
+                            Transform::IDENTITY,
+                            -5.5,
+                        );
+
+                        Ok(())
+                    });
+
+        self.submarine.execute(|submarine| {
+                        window.draw_ex(
+                            &Rectangle::new((-180.0, -180.0), (360.0, 360.0)),
+                            Background::Img(&submarine),
+                            Transform::rotate((time * 1.0).sin() * 3.0)
+                            * Transform::translate((700.0, 250.0 + (time * 2.0).sin() * 8.0)),
+                            -0.5,
+                        );
+
+                        Ok(())
+                    });
+
         let is_high_score = self.is_high_score;
         self.font.execute(|font| {
             let img = font.render("Game Over!", &FontStyle::new(64.0, Color::WHITE)).unwrap();

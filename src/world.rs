@@ -14,8 +14,8 @@ pub struct Globals {
 }
 
 const FISH_STAMINA: f32 = 0.15;
-const FUEL_BOOST: f32 = 0.35;
-const TAPE_BOOST: f32 = 0.35;
+const FUEL_BOOST: f32 = 0.25;
+const TAPE_BOOST: f32 = 0.25;
 
 pub struct Attr {
     pub stamina: f32,
@@ -94,7 +94,7 @@ pub fn create() -> (Globals, specs::World) {
         world
             .create_entity()
             .with(Pos(Vec2::new(
-                thread_rng().gen_range(-5000.0, 5000.0),
+                thread_rng().gen_range(-3000.0, 3000.0),
                 thread_rng().gen_range(0.0, 1500.0),
             )))
             .with(Vel(Vec2::zero()))
@@ -106,11 +106,11 @@ pub fn create() -> (Globals, specs::World) {
             .build();
     }
 
-    for i in 0..25 {
+    for i in 0..15 {
         world
             .create_entity()
             .with(Pos(Vec2::new(
-                thread_rng().gen_range(-5000.0, 5000.0),
+                thread_rng().gen_range(-3000.0, 3000.0),
                 thread_rng().gen_range(0.0, 1500.0),
             )))
             .with(Vel(Vec2::zero()))
@@ -123,7 +123,7 @@ pub fn create() -> (Globals, specs::World) {
         world
             .create_entity()
             .with(Pos(Vec2::new(
-                thread_rng().gen_range(-5000.0, 5000.0),
+                thread_rng().gen_range(-3000.0, 3000.0),
                 thread_rng().gen_range(0.0, 1500.0),
             )))
             .with(Vel(Vec2::zero()))
@@ -135,11 +135,11 @@ pub fn create() -> (Globals, specs::World) {
             .build();
     }
 
-    for i in 0..150 {
+    for i in 0..100 {
         world
             .create_entity()
             .with(Pos(Vec2::new(
-                thread_rng().gen_range(-5000.0, 5000.0),
+                thread_rng().gen_range(-4000.0, 4000.0),
                 thread_rng().gen_range(0.0, 1500.0),
             )))
             .with(Vel(Vec2::zero()))
@@ -212,10 +212,10 @@ pub fn tick(world: &specs::World, inputs: Inputs, time: f32, globals: &Globals) 
         ori.0 += rot.0;
 
         // Collision with seafloor
-        let sample = seafloor.sample(pos.0.x);
-        if pos.0.y > sample {
-            pos.0.y = sample;
-            vel.0 *= 0.93;
+        while pos.0.y > seafloor.sample(pos.0.x) {
+            pos.0 += seafloor.normal_at(pos.0.x) * 0.5;
+            vel.0 += seafloor.normal_at(pos.0.x) * 0.1;
+            vel.0 *= 0.97;
         }
 
     }
@@ -373,7 +373,7 @@ pub fn tick(world: &specs::World, inputs: Inputs, time: f32, globals: &Globals) 
         &world.read_storage::<Respawn>(),
     ).join() {
         pos.0 = Vec2::new(
-            thread_rng().gen_range(-5000.0, 5000.0),
+            thread_rng().gen_range(-3500.0, 3500.0),
             thread_rng().gen_range(-300.0, 1500.0),
         );
         world.write_storage::<Collected>().remove(entity);
@@ -477,14 +477,14 @@ pub struct Seafloor {
 
 const SEAFLOOR_HEIGHT: f32 = 1500.0;
 const SEAFLOOR_STRIDE: f32 = 10.0;
-const SEAFLOOR_OFFSET: i32 = 500;
+const SEAFLOOR_OFFSET: i32 = 700;
 
 impl Seafloor {
     pub fn sine() -> Self {
         Self {
-            heights: (-SEAFLOOR_OFFSET..500)
+            heights: (-SEAFLOOR_OFFSET..700)
                 .map(|i| i as f32 * SEAFLOOR_STRIDE)
-                .map(|x| SEAFLOOR_HEIGHT + (x * 0.01).sin() * 30.0 + (x * 0.002).sin() * 120.0)
+                .map(|x| SEAFLOOR_HEIGHT + (x * 0.01).sin() * 30.0 + (x * 0.002).sin() * 120.0 - x.abs() * 0.35)
                 .collect(),
         }
     }
@@ -502,8 +502,8 @@ impl Seafloor {
 
     pub fn normal_at(&self, x: f32) -> Vec2<f32> {
         Vec2::new(
-            1.0,
-            1.0 / (self.sample(x - 0.5) - self.sample(x + 0.5))
+            1.0 * (self.sample(x + 5.0) - self.sample(x - 5.0)),
+            -10.0,
         ).try_normalized().unwrap_or(-Vec2::unit_y())
     }
 }

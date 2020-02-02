@@ -27,8 +27,10 @@ pub struct Menu {
     dark: Asset<Image>,
 
     chomp: Asset<Sound>,
+    music: Asset<Sound>,
 
     font: Asset<Font>,
+    music_playing: bool,
 }
 
 impl Menu {
@@ -51,13 +53,24 @@ impl Menu {
             dark: Asset::new(Image::load("dark.png")),
 
             chomp: Asset::new(Sound::load("chomp.wav")),
+            music: Asset::new(Sound::load("music.ogg")),
 
             font: Asset::new(Font::load("font.ttf")),
+            music_playing: false,
         }
     }
 
     pub fn tick(&mut self, window: &mut Window, universals: &mut Universals) -> Option<State> {
         let time = self.time;
+
+        let mut music_playing = &mut self.music_playing;
+        if !*music_playing {
+            self.music.execute(|music| {
+                *music_playing = true;
+                music.set_volume(0.25);
+                music.play()
+            }).unwrap();
+        }
 
         // Handle input
         if window.keyboard()[Key::Space].is_down() && time > 0.5 {
@@ -65,6 +78,29 @@ impl Menu {
         }
 
         window.clear(Color::from_rgba(120, 200, 255, 1.0));
+
+        self.background.execute(|background| {
+                        window.draw_ex(
+                            &Rectangle::new((0.0, 0.0), (1000.0, 500.0)),
+                            Background::Img(&background),
+                            Transform::IDENTITY,
+                            -5.5,
+                        );
+
+                        Ok(())
+                    });
+
+        self.submarine.execute(|submarine| {
+                        window.draw_ex(
+                            &Rectangle::new((-180.0, -180.0), (360.0, 360.0)),
+                            Background::Img(&submarine),
+                            Transform::rotate((time * 1.0).sin() * 3.0)
+                            * Transform::translate((700.0, 250.0 + (time * 2.0).sin() * 8.0)),
+                            -0.5,
+                        );
+
+                        Ok(())
+                    });
 
         self.font.execute(|font| {
             let img = font.render("Seal the Sub", &FontStyle::new(64.0, Color::WHITE)).unwrap();
