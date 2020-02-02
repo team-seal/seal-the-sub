@@ -13,19 +13,30 @@ pub struct Globals {
     pub submarine: Entity,
 }
 
+const FISH_STAMINA: f32 = 0.15;
+
 pub struct Attr {
     pub stamina: f32,
+    pub hull: f32,
+    pub lost: bool,
 }
 
 impl Attr {
     pub fn new() -> Self {
         Self {
             stamina: 1.0,
+            hull: 1.0,
+            lost: false,
         }
     }
 
     pub fn tick(&mut self) {
-        self.stamina -= 0.001;
+        self.stamina = (self.stamina - 0.0003).max(0.0).min(1.0);
+        self.hull = (self.hull - 0.0003).max(0.0).min(1.0);
+
+        if self.stamina <= 0.0 || self.hull <= 0.0 {
+            self.lost = true;
+        }
     }
 }
 
@@ -122,7 +133,6 @@ pub fn tick(world: &specs::World, inputs: Inputs, time: f32) -> TickInfo {
 
     let seafloor = world.read_resource::<Seafloor>();
     let mut attr = world.write_resource::<Attr>();
-    attr.tick();
 
     // Physics
     for (pos, vel, ori, rot) in (
@@ -203,15 +213,15 @@ pub fn tick(world: &specs::World, inputs: Inputs, time: f32) -> TickInfo {
             Agent::Fish => {
                 all_pos_vel.sort_by_key(|(other_pos, _)| pos.0.distance_squared(*other_pos) as i32);
 
-                let (total_vel, n) = all_pos_vel.iter().take(4).fold((Vec2::zero(), 0.0), |(tv, n), (_, v)| (tv + v, n + 1.0));
+                let (total_vel, n) = all_pos_vel.iter().take(3).fold((Vec2::zero(), 0.0), |(tv, n), (_, v)| (tv + v, n + 1.0));
                 let avg_vel = total_vel / n;
 
-                let (total_pos, n) = all_pos_vel.iter().take(4).fold((Vec2::zero(), 0.0), |(tp, n), (p, _)| (tp + p, n + 1.0));
+                let (total_pos, n) = all_pos_vel.iter().take(3).fold((Vec2::zero(), 0.0), |(tp, n), (p, _)| (tp + p, n + 1.0));
                 let avg_pos = total_pos / n;
 
-                let shy_dir = all_pos_vel.iter().take(4).fold(Vec2::zero(), |a, (p, _)| a + (pos.0 - p).try_normalized().unwrap_or(Vec2::zero()) * (100.0 - (pos.0 - p).magnitude()).max(0.0));
-                let dir = Vec2::lerp((avg_pos - pos.0).normalized(), avg_vel, 0.5) + shy_dir;
-                let dir = (dir.map(|e| e + thread_rng().gen_range(-0.02, 0.02)) - pos.0 * Vec2::new(1.0, 2.0) * 0.0005).normalized();
+                let shy_dir = all_pos_vel.iter().take(3).fold(Vec2::zero(), |a, (p, _)| a + (pos.0 - p).try_normalized().unwrap_or(Vec2::zero()) * (100.0 - (pos.0 - p).magnitude()).max(0.0));
+                let dir = Vec2::lerp((avg_pos - pos.0).normalized(), avg_vel, 0.75) + shy_dir * 0.15;
+                let dir = (dir.map(|e| e + thread_rng().gen_range(-0.05, 0.05)) - (pos.0 - Vec2::new(0.0, 650.0)) * Vec2::new(1.0, 4.5) * 0.0003).normalized();
 
                 let dir = Lerp::lerp(Vec2::new(ori.0.cos(), ori.0.sin()), dir, 0.1).try_normalized().unwrap_or(Vec2::zero());
                 ori.0 = dir.y.atan2(dir.x);
@@ -260,6 +270,7 @@ pub fn tick(world: &specs::World, inputs: Inputs, time: f32) -> TickInfo {
                 match item {
                     Item::Fish => {
                         world.write_storage().insert(other_entity, Respawn);
+                        attr.stamina += FISH_STAMINA;
                         tick_info.events.push(Event::Eat);
                     },
                 }
@@ -278,6 +289,9 @@ pub fn tick(world: &specs::World, inputs: Inputs, time: f32) -> TickInfo {
         );
     }
     world.write_storage::<Respawn>().clear();
+
+    // Tick global attributes
+    attr.tick();
 
     tick_info
 }

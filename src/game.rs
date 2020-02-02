@@ -210,20 +210,26 @@ impl Game {
 
         let attr = self.world.read_resource::<Attr>();
 
-        self.font.execute(|font| {
-            let img = font.render(&format!("Stamina:"), &FontStyle::new(32.0, Color::WHITE)).unwrap();
-            window.draw_ex(
-                &img.area(),
-                Background::Img(&img),
-                Transform::translate((24.0, 24.0)),
-                10.0,
-            );
+        let mut font = &mut self.font;
+        let mut draw_bar = |msg, val, y: f32| {
+            font.execute(|font| {
+                let img = font.render(msg, &FontStyle::new(32.0, Color::WHITE)).unwrap();
+                window.draw_ex(
+                    &img.area(),
+                    Background::Img(&img),
+                    Transform::translate((160.0, y + 2.0)),
+                    10.0,
+                );
 
-            Ok(())
-        });
+                window.draw_ex(&Rectangle::new((22.0, y + 6.0), (128.0, 24.0)), Color::from_rgba(100, 100, 100, 1.0), Transform::IDENTITY, 10.0);
+                window.draw_ex(&Rectangle::new((22.0, y + 6.0), (128.0 * val, 24.0)), Color::from_rgba(100, 255, 50, 1.0), Transform::IDENTITY, 10.0);
 
-        window.draw(&Rectangle::new((128.0, 32.0), (128.0, 24.0)), Color::from_rgba(100, 100, 100, 1.0));
-        window.draw(&Rectangle::new((128.0, 32.0), (128.0 * attr.stamina, 24.0)), Color::from_rgba(100, 255, 50, 1.0));
+                Ok(())
+            });
+        };
+
+        draw_bar("Stamina", attr.stamina, 16.0);
+        draw_bar("Hull", attr.hull, 48.0);
 
         self.time = time + 1.0 / 60.0;
     }
